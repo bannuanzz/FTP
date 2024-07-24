@@ -1,0 +1,8 @@
+server:
+  port: 8080
+
+ftp:
+  server: localhost
+  port: 21
+  user: username
+  password: password
