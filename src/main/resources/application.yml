@@ -2,7 +2,8 @@ server:
   port: 8080
 
 ftp:
-  server: localhost
+  server: Morii
   port: 21
   user: username
   password: password
+  default-dir: D:\  # 添加默认上传路径
