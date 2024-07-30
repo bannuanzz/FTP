@@ -124,7 +124,6 @@ public class FtpService {
         if (localFile.exists()) {
             localFileSize = localFile.length();
         }
-
         try (Socket cmdSocket = new Socket(ftpProperties.getServer(), ftpProperties.getPort());
              PrintWriter writer = new PrintWriter(cmdSocket.getOutputStream(), true);
              BufferedReader reader = new BufferedReader(new InputStreamReader(cmdSocket.getInputStream()))) {
@@ -143,6 +142,8 @@ public class FtpService {
             String response = readResponse(reader);
             System.out.println(response);
 
+            System.out.println("Downloading file: " + remoteFilePath + " to " + localFilePath);
+            System.out.println();
             int dataPort = extractPassivePort(response);
 
             try (Socket dataSocket = new Socket(ftpProperties.getServer(), dataPort);

@@ -5,13 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import java.io.File;
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/ftp")
@@ -24,13 +27,13 @@ public class FtpController {
     public String uploadFile(@RequestParam("file") MultipartFile file,
                              @RequestParam(value = "remoteDir", required = false) String remoteDir) {
 
-        String tempDir = "D:\\temp\\upload"; // 设置为你有权限写入的目录
+        String tempDir = System.getProperty("java.io.tmpdir"); // 使用系统临时目录
         File dir = new File(tempDir);
         if (!dir.exists()) {
             dir.mkdirs();
         }
 
-        String tempFilePath = tempDir + "/" + file.getOriginalFilename();
+        String tempFilePath = tempDir + File.separator + "upload_" + System.currentTimeMillis() + "_" + file.getOriginalFilename();
         Path filePath = Paths.get(tempFilePath);
 
         try {
@@ -38,14 +41,22 @@ public class FtpController {
             if (!Files.isWritable(filePath.getParent())) {
                 throw new AccessDeniedException("No write access to directory: " + tempDir);
             }
+
+            // 保存临时文件并获取文件锁
+            try (FileOutputStream fos = new FileOutputStream(tempFilePath);
+                 FileChannel channel = fos.getChannel()) {
+                FileLock lock = channel.tryLock();
+                if (lock != null) {
+                    fos.write(file.getBytes());
+                    lock.release();
+                } else {
+                    throw new IOException("Unable to lock file: " + tempFilePath);
+                }
+            }
+
             System.out.println("Directory writable: " + Files.isWritable(filePath.getParent()));
             System.out.println("File path writable: " + Files.isWritable(filePath));
-            // 保存临时文件
-            file.transferTo(filePath.toFile());
 
-            // 打印文件属性用于调试
-            System.out.println("File permissions: " + Files.getPosixFilePermissions(filePath));
-            System.out.println("File owner: " + Files.getOwner(filePath));
             // 上传文件到FTP服务器
             ftpService.uploadFile(tempFilePath, remoteDir);
             return "Upload successful";
